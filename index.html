@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>總務處工作平台</title>
+<style>
+:root{
+  --bg:#eaf1fb; --blue:#3f74d6; --blue-deep:#2c57b0;
+  --card:#ffffff; --text:#2b3140; --muted:#8b94a7;
+  --border:#e4e9f2; --orange:#f2933d; --orange-soft:#fdebd8;
+  --purple:#e7e0f7; --purple-deep:#7a63d6; --green:#2e9e5b;
+  --shadow:0 3px 14px rgba(50,80,150,.10);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Microsoft JhengHei","PingFang TC","Helvetica Neue",Arial,sans-serif;font-size:15px}
+.app{display:flex;min-height:100vh}
+.sidebar{width:248px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:22px 18px;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.brand img{width:46px;height:46px;border-radius:12px;object-fit:cover}
+.brand-text b{font-size:17px;display:block;line-height:1.25}
+.brand-text span{font-size:11px;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border:none;background:transparent;border-radius:12px;font-size:15px;color:var(--text);cursor:pointer;text-align:left;font-family:inherit;transition:.15s}
+.nav-item .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.nav-item:hover{background:var(--bg)}
+.nav-item.active{background:var(--purple);color:var(--purple-deep);font-weight:600}
+.nav-item.active .dot{background:var(--purple-deep)}
+.sidebar-foot{margin-top:auto;text-align:center;color:var(--muted);font-size:11px;padding-top:18px}
+.sidebar-foot img{width:60px;height:60px;object-fit:cover;margin-bottom:6px;border-radius:12px}
+.main{flex:1;padding:26px 30px;max-width:1180px}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.topbar h1{margin:0;font-size:22px}
+.topbar .date{color:var(--muted);font-size:13px;margin-top:4px}
+.welcome{display:flex;align-items:center;gap:10px}
+.welcome img{width:40px;height:40px;border-radius:10px;object-fit:cover}
+.welcome #welcomeText{font-size:14px}
+.sync-box{display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin-right:2px}
+.sync-stat{font-size:11px;color:var(--muted)}
+.btn{background:var(--orange);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:14px;cursor:pointer;font-family:inherit;transition:.15s}
+.btn:hover{filter:brightness(1.05)}
+.btn.sm{padding:5px 11px;font-size:12.5px;border-radius:7px}
+.btn.ghost{background:var(--orange-soft);color:var(--orange)}
+.btn.purple{background:var(--purple);color:var(--purple-deep)}
+.module{display:none}
+.module.active{display:block}
+.sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);min-width:128px}
+.stat .n{font-size:26px;font-weight:700;color:var(--blue)}
+.stat .l{font-size:12px;color:var(--muted);margin-top:2px}
+.stat.orange .n{color:var(--orange)}
+.acc-cat{border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden;background:var(--card)}
+.acc-head{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;user-select:none}
+.acc-head .ct{font-weight:600;font-size:15px;flex:1}
+.acc-head .badge{background:var(--orange);color:#fff;font-size:12px;border-radius:999px;padding:2px 9px;min-width:22px;text-align:center}
+.acc-head .add{background:var(--orange);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer}
+.acc-body{padding:4px 16px 16px;display:none}
+.acc-cat.open .acc-body{display:block}
+.task{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border)}
+.task .content{flex:1;min-width:0}
+.task .ct{font-weight:600}
+.task .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.status{font-size:12px;border-radius:999px;padding:3px 10px;display:inline-block;margin-right:6px}
+.status[data-status="未完成"]{background:var(--orange-soft);color:var(--orange)}
+.status[data-status="進行中"]{background:var(--purple);color:var(--purple-deep)}
+.status[data-status="已完成"]{background:#e3f3e8;color:var(--green)}
+.add-row{display:flex;gap:8px;flex-wrap:wrap;padding-top:12px;border-top:1px dashed var(--border);margin-top:8px}
+.add-row input,.add-row select{flex:1;min-width:120px}
+.empty{color:var(--muted);font-size:13px;padding:10px 0;text-align:center}
+.report-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.rep-card h2{font-size:17px;margin:0 0 12px}
+.rep-col h3{font-size:14px;color:var(--text);margin:0 0 8px;display:flex;justify-content:space-between}
+.rep-col h3 span{color:var(--muted);font-weight:400}
+.rep-item{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border)}
+.rep-item .txt{flex:1;font-size:13.5px;line-height:1.45}
+.rep-add{display:flex;gap:6px;margin-top:10px}
+.rep-add input{flex:1}
+.icon-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px 6px;border-radius:6px}
+.icon-btn:hover{color:var(--orange);background:var(--bg)}
+.meet-wrap{display:flex;gap:16px;flex-wrap:wrap}
+.meet-wrap>.card{flex:1;min-width:320px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-head .m{font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.wd{text-align:center;font-size:12px;color:var(--muted);padding:4px 0}
+.cal-cell{aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg);position:relative;font-size:14px;transition:.12s}
+.cal-cell.muted{background:transparent;cursor:default}
+.cal-cell:hover:not(.muted){background:var(--purple)}
+.cal-cell.today{border:2px solid var(--orange)}
+.cal-cell.has{background:var(--orange-soft);color:var(--orange);font-weight:700}
+.cal-cell .cnt{position:absolute;bottom:4px;font-size:11px}
+.meet-list{margin-top:14px}
+.meet-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border)}
+.meet-item .mt{font-weight:600}
+.meet-item .mm{font-size:13px;color:var(--muted)}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.form-row label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+input[type=text],input[type=date],input[type=datetime-local],select,textarea{
+  width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;
+  font-size:14px;font-family:inherit;background:#fff;color:var(--text)}
+textarea{resize:vertical;min-height:54px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="bear1.jpg" alt="吉祥物">
+      <div class="brand-text"><b>總務處工作平台</b><span>上海台商子女學校</span></div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-mod="tasks"><span class="dot"></span>主任交辦事項</button>
+      <button class="nav-item" data-mod="reports"><span class="dot"></span>各處室工作報告</button>
+      <button class="nav-item" data-mod="meetings"><span class="dot"></span>會議管理</button>
+    </nav>
+    <div class="sidebar-foot"><img src="bear2.jpg" alt="吉祥物2"><br>總務處 溫馨提醒您</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div><h1 id="modTitle">主任交辦事項</h1><div class="date" id="todayStr"></div></div>
+      <div class="welcome">
+        <div class="sync-box"><button class="btn sm" id="syncBtn">⟳ 同步資料</button><span class="sync-stat" id="syncStat">同步中…</span></div>
+        <span id="welcomeText">總務處 早安</span>
+        <img src="bear1.jpg" alt="吉祥物">
+      </div>
+    </div>
+
+    <!-- 模組一：主任交辦事項 -->
+    <section class="module active" id="mod-tasks">
+      <h2>主任交辦事項</h2>
+      <div class="sub">六個分類垂直手風琴：點標題展開／收合；每分類可「＋新增交辦事項」，欄位＝內容、負責人、期限、狀態（未完成／進行中／已完成），支援狀態切換與刪除；標題旁橘色徽章為該分類未完成數。</div>
+      <div class="stats" id="accStats"></div>
+      <div id="accContainer"></div>
+    </section>
+
+    <!-- 模組二：各處室工作報告 -->
+    <section class="module" id="mod-reports">
+      <h2>各處室工作報告</h2>
+      <div class="sub">五個組別（事務／工務／文書／交通／出納組）各分「已完成事項」與「即將進行事項」兩欄，組長可條列新增、單筆刪除；右上「彙整輸出 Word 檔」可一鍵匯出 .doc（標楷體、含週次與彙整日期）。</div>
+      <div style="margin-bottom:14px"><button class="btn" id="exportWord">彙整輸出 Word 檔</button></div>
+      <div id="reportBoard"></div>
+    </section>
+
+    <!-- 模組三：會議管理 -->
+    <section class="module" id="mod-meetings">
+      <h2>會議管理</h2>
+      <div class="sub">月曆檢視（可切上／下月、回今天），有會議的日期顯示橘色數字；點選日期即帶入該日 09:00 為會議時間；右方登錄表單＝姓名／時間／會議主題／地點／備註（選填）；下方會議紀錄依時間排序、可刪除。</div>
+      <div class="meet-wrap">
+        <div class="card">
+          <div class="cal-head">
+            <button class="icon-btn" id="prevM">‹ 上個月</button>
+            <span class="m" id="calMonth"></span>
+            <span><button class="icon-btn" id="todayM">今天</button><button class="icon-btn" id="nextM">下個月 ›</button></span>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="meet-list" id="meetList"></div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px">登錄會議</h3>
+          <div class="form-row">
+            <div><label>姓名</label><input type="text" id="mName" placeholder="會議登錄人"></div>
+            <div><label>時間</label><input type="datetime-local" id="mTime"></div>
+            <div><label>會議主題</label><input type="text" id="mTopic" placeholder="例：總務處週報會議"></div>
+            <div><label>地點</label><input type="text" id="mPlace" placeholder="例：行政會議室"></div>
+            <div><label>備註（選填）</label><textarea id="mNote" placeholder="補充說明"></textarea></div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px"><button class="btn" id="mAdd">新增會議</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="supabase.min.js"></script>
+<script>
+/* ============ 基礎設定 ============ */
+const CATS=['共通事項','事務組','工務組','文書組','交通組','出納組'];
+const GROUPS=['事務組','工務組','文書組','交通組','出納組'];
+const STATUS=['未完成','進行中','已完成'];
+const MODS={tasks:'主任交辦事項',reports:'各處室工作報告',meetings:'會議管理'};
+
+const LS={acc:'chu_acc',reports:'chu_reports',meetings:'chu_meetings'};
+
+const SUPABASE_URL='https://gzizktclpsqespnpjbfi.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6aXprdGNscHNxZXNwbnBqYmZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1OTY2MDEsImV4cCI6MjEwOTE3MjYwMX0.VzIxD8YXIhFdUzqxTlvLyds7d8C-MqcP1QjDEuacqRI';
+const cloudOn=!!(SUPABASE_URL&&SUPABASE_ANON_KEY&&window.supabase&&SUPABASE_ANON_KEY.indexOf('__')!==0);
+let _sb=null;
+if(cloudOn){try{_sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){_sb=null;}}
+
+const store=(()=>{try{localStorage.setItem('__wb_probe__','1');localStorage.removeItem('__wb_probe__');return localStorage;}catch(e){const m={};return{getItem:k=>(k in m?m[k]:null),setItem:(k,v)=>{m[k]=String(v)},removeItem:k=>{delete m[k]}};}})();
+const load=k=>{try{return JSON.parse(store.getItem(k));}catch(e){return null;}};
+const save=(k,v)=>{try{store.setItem(k,JSON.stringify(v));}catch(e){} if(cloudOn&&_sb)cloudSet(k,v);};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function cloudGet(key){
+  if(!_sb)return null;
+  try{const {data,error}=await _sb.from('app_data').select('value').eq('key',key).maybeSingle();
+    if(error){console.warn('cloudGet',key,error.message);return null;}
+    return data?data.value:null;}catch(e){return null;}
+}
+async function cloudSet(key,val){
+  if(!_sb)return;
+  try{const {error}=await _sb.from('app_data').upsert({key,value:val},{onConflict:'key'});
+    if(error)console.warn('cloudSet',key,error.message);}catch(e){}
+}
+
+/* ============ 資料 ============ */
+let acc={}; CATS.forEach(c=>acc[c]=[]);
+let reports={}; GROUPS.forEach(g=>reports[g]={done:[],upcoming:[]});
+let meetings=[];
+
+/* ============ 模組一：主任交辦事項 ============ */
+function renderAcc(){
+  let total=0,undone=0;
+  CATS.forEach(c=>acc[c].forEach(t=>{total++;if(t.status!=='已完成')undone++;}));
+  document.getElementById('accStats').innerHTML=
+    `<div class="stat"><div class="n">${total}</div><div class="l">交辦總數</div></div>`+
+    `<div class="stat orange"><div class="n">${undone}</div><div class="l">未完成數</div></div>`+
+    CATS.map(c=>`<div class="stat"><div class="n">${acc[c].filter(t=>t.status!=='已完成').length}</div><div class="l">${esc(c)} 待辦</div></div>`).join('');
+  const box=document.getElementById('accContainer');
+  box.innerHTML=CATS.map(c=>{
+    const items=acc[c];
+    const badge=items.filter(t=>t.status!=='已完成').length;
+    const body=items.map(t=>`<div class="task" data-id="${t.id}">
+      <div class="content">
+        <div class="ct">${esc(t.content)}</div>
+        <div class="meta"><span class="owner">負責人：${esc(t.owner||'—')}</span> ｜ <span class="due">期限：${esc(t.due||'—')}</span></div>
+      </div>
+      <span class="status" data-status="${t.status}">${esc(t.status)}</span>
+      <select class="st">${STATUS.map(s=>`<option ${t.status===s?'selected':''}>${s}</option>`).join('')}</select>
+      <button class="icon-btn del">刪除</button>
+    </div>`).join('')||'<div class="empty">尚無交辦事項</div>';
+    return `<div class="acc-cat${badge?' open':''}" data-cat="${c}">
+      <div class="acc-head"><span class="ct">${esc(c)}</span><span class="badge">${badge}</span><button class="add">＋新增</button></div>
+      <div class="acc-body">${body}
+        <div class="add-row">
+          <input class="c-content" placeholder="交辦內容">
+          <input class="c-owner" placeholder="負責人">
+          <input class="c-due" type="date">
+          <select class="c-status">${STATUS.map(s=>`<option ${s==='未完成'?'selected':''}>${s}</option>`).join('')}</select>
+          <button class="btn sm add-confirm">新增</button>
+        </div>
+      </div></div>`;
+  }).join('');
+  box.querySelectorAll('.acc-head').forEach(h=>{
+    h.querySelector('.ct').onclick=()=>h.parentElement.classList.toggle('open');
+    h.querySelector('.add').onclick=(e)=>{e.stopPropagation();h.parentElement.classList.add('open');};
+  });
+  box.querySelectorAll('.add-confirm').forEach(b=>{
+    b.onclick=()=>{
+      const cat=b.closest('.acc-cat').dataset.cat;
+      const row=b.closest('.add-row');
+      const content=row.querySelector('.c-content').value.trim();
+      if(!content){alert('請填寫交辦內容');return;}
+      acc[cat].push({id:uid(),content,owner:row.querySelector('.c-owner').value.trim(),due:row.querySelector('.c-due').value,status:row.querySelector('.c-status').value});
+      save(LS.acc,acc);renderAcc();
+    };
+  });
+  box.querySelectorAll('.task .st').forEach(sel=>{
+    sel.onchange=()=>{
+      const cat=sel.closest('.acc-cat').dataset.cat,id=sel.closest('.task').dataset.id;
+      const t=acc[cat].find(x=>x.id===id); if(t){t.status=sel.value;save(LS.acc,acc);renderAcc();}
+    };
+  });
+  box.querySelectorAll('.task .del').forEach(b=>{
+    b.onclick=()=>{
+      const cat=b.closest('.acc-cat').dataset.cat,id=b.closest('.task').dataset.id;
+      if(confirm('確定刪除此交辦事項？')){acc[cat]=acc[cat].filter(x=>x.id!==id);save(LS.acc,acc);renderAcc();}
+    };
+  });
+}
+
+/* ============ 模組二：各處室工作報告 ============ */
+function renderReport(){
+  const wrap=document.getElementById('reportBoard');
+  wrap.innerHTML=GROUPS.map(g=>{
+    const r=reports[g]||{done:[],upcoming:[]};
+    const col=(kind,title,arr)=>`<div class="rep-col"><h3>${title}<span>${arr.length}</span></h3>`+
+      arr.map((x,i)=>`<div class="rep-item"><span class="txt">${esc(x)}</span><button class="icon-btn del" data-g="${g}" data-k="${kind}" data-i="${i}">刪除</button></div>`).join('')+
+      `<div class="rep-add"><input placeholder="新增${title}（Ctrl+Enter 送出）" data-g="${g}" data-k="${kind}"><button class="btn sm add" data-g="${g}" data-k="${kind}">＋</button></div></div>`;
+    return `<div class="card rep-card"><h2>${g}</h2><div class="report-wrap">${col('done','已完成事項',r.done)}${col('upcoming','即將進行事項',r.upcoming)}</div></div>`;
+  }).join('');
+  wrap.querySelectorAll('.rep-add .add').forEach(b=>{
+    b.onclick=()=>{
+      const g=b.dataset.g,k=b.dataset.k,inp=b.previousElementSibling,v=inp.value.trim();
+      if(!v)return; reports[g][k].push(v);save(LS.reports,reports);renderReport();
+      const ni=document.querySelector(`.rep-add input[data-g="${g}"][data-k="${k}"]`); if(ni)ni.focus();
+    };
+  });
+  wrap.querySelectorAll('.rep-add input').forEach(inp=>{
+    inp.onkeydown=(e)=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){const g=inp.dataset.g,k=inp.dataset.k,v=inp.value.trim();if(v){reports[g][k].push(v);save(LS.reports,reports);renderReport();}}};
+  });
+  wrap.querySelectorAll('.rep-item .del').forEach(b=>{
+    b.onclick=()=>{const g=b.dataset.g,k=b.dataset.k,i=+b.dataset.i;reports[g][k].splice(i,1);save(LS.reports,reports);renderReport();};
+  });
+}
+function getWeekNumber(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=Math.floor((t-new Date(Date.UTC(t.getUTCFullYear(),0,1)))/86400000);return Math.ceil((day+1)/7);}
+function fmtDate(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate());}
+function exportWord(){
+  const wk=getWeekNumber(new Date()),ds=fmtDate(new Date());
+  let h='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8">';
+  h+='<style>body{font-family:"標楷體","DFKai-SB","KaiTi",serif;font-size:14pt;line-height:1.7} h1{font-size:20pt;text-align:center} h2{font-size:16pt;border-bottom:1px solid #888;padding-bottom:4px} h3{font-size:14pt} li{margin-bottom:4px}</style></head><body>';
+  h+='<h1>總務處 各處室工作報告彙整</h1>';
+  h+='<p style="text-align:center">彙整週次：第 '+wk+' 週　｜　彙整日期：'+ds+'</p>';
+  GROUPS.forEach(g=>{
+    const r=reports[g]||{done:[],upcoming:[]};
+    h+='<h2>'+esc(g)+'</h2>';
+    h+='<h3>已完成事項</h3><ol>'+(r.done.length?r.done.map(x=>'<li>'+esc(x)+'</li>').join(''):'<li>無</li>')+'</ol>';
+    h+='<h3>即將進行事項</h3><ol>'+(r.upcoming.length?r.upcoming.map(x=>'<li>'+esc(x)+'</li>').join(''):'<li>無</li>')+'</ol>';
+  });
+  h+='</body></html>';
+  const blob=new Blob(['\ufeff'+h],{type:'application/msword'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='總務處工作報告_'+ds+'.doc';document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);
+}
+
+/* ============ 模組三：會議管理 ============ */
+const WD=['日','一','二','三','四','五','六'];
+const now=new Date();
+let calY=now.getFullYear(),calM=now.getMonth();
+const pad=n=>String(n).padStart(2,'0');
+function renderCal(){
+  document.getElementById('calMonth').textContent=calY+' 年 '+(calM+1)+' 月';
+  const grid=document.getElementById('calGrid');
+  grid.innerHTML=WD.map(w=>`<div class="wd">${w}</div>`).join('');
+  const first=new Date(calY,calM,1).getDay();
+  const days=new Date(calY,calM+1,0).getDate();
+  const cnt={}; meetings.forEach(m=>{const k=m.time.slice(0,10);cnt[k]=(cnt[k]||0)+1;});
+  for(let i=0;i<first;i++) grid.innerHTML+=`<div class="cal-cell muted"></div>`;
+  for(let d=1;d<=days;d++){
+    const ds=`${calY}-${pad(calM+1)}-${pad(d)}`;
+    const isToday=(calY===now.getFullYear()&&calM===now.getMonth()&&d===now.getDate());
+    const has=cnt[ds]?`<span class="cnt">${cnt[ds]}</span>`:'';
+    grid.innerHTML+=`<div class="cal-cell ${isToday?'today':''} ${cnt[ds]?'has':''}" data-d="${ds}">${d}${has}</div>`;
+  }
+  grid.querySelectorAll('.cal-cell[data-d]').forEach(c=>{
+    c.onclick=()=>{document.getElementById('mTime').value=c.dataset.d+'T09:00';document.getElementById('mTopic').focus();};
+  });
+  renderMeetList();
+}
+function fmtTime(s){if(!s)return '—';const [d,t]=s.split('T');return `${d.replace(/-/g,'/')} ${t||''}`;}
+function renderMeetList(){
+  const box=document.getElementById('meetList');
+  const arr=[...meetings].sort((a,b)=>a.time<b.time?-1:1);
+  if(!arr.length){box.innerHTML='<div class="empty">尚無會議紀錄</div>';return;}
+  box.innerHTML='<div style="font-size:13px;color:var(--muted);margin-bottom:6px">會議紀錄（依時間排序）</div>'+
+    arr.map(m=>`<div class="meet-item" data-id="${m.id}">
+      <div><div class="mt">${esc(m.topic||'未命名會議')}</div>
+      <div class="mm">${fmtTime(m.time)} ｜ ${esc(m.name||'—')} ｜ ${esc(m.place||'—')}${m.note?'<br>備註：'+esc(m.note):''}</div></div>
+      <button class="icon-btn" data-act="del">刪除</button></div>`).join('');
+  box.querySelectorAll('.meet-item').forEach(it=>{
+    it.querySelector('[data-act=del]').onclick=()=>{if(confirm('確定刪除此會議紀錄？')){meetings=meetings.filter(x=>x.id!==it.dataset.id);save(LS.meetings,meetings);renderCal();}};
+  });
+}
+function addMeeting(){
+  const name=document.getElementById('mName').value.trim();
+  const time=document.getElementById('mTime').value;
+  const topic=document.getElementById('mTopic').value.trim();
+  if(!time||!topic){alert('請填寫「時間」與「會議主題」');return;}
+  meetings.push({id:uid(),name,time,topic,place:document.getElementById('mPlace').value.trim(),note:document.getElementById('mNote').value.trim()});
+  save(LS.meetings,meetings);
+  document.getElementById('mTopic').value='';document.getElementById('mPlace').value='';document.getElementById('mNote').value='';
+  renderCal();
+}
+
+/* ============ 同步 ============ */
+function fmtClock(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
+function setSyncStat(t){const el=document.getElementById('syncStat');if(el)el.textContent=t;}
+function isUserEditing(){
+  const a=document.activeElement;
+  if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'))return true;
+  return false;
+}
+async function refreshAll(){
+  if(cloudOn&&_sb){
+    let ok=true;
+    try{const a=await cloudGet(LS.acc);
+      if(a&&typeof a==='object'){CATS.forEach(c=>{if(!Array.isArray(a[c]))a[c]=[];});acc=a;} else acc=load(LS.acc)||acc;
+    }catch(e){acc=load(LS.acc)||acc;ok=false;}
+    try{const r=await cloudGet(LS.reports);
+      if(r&&typeof r==='object'){GROUPS.forEach(g=>{if(!r[g])r[g]={done:[],upcoming:[]};if(!Array.isArray(r[g].done))r[g].done=[];if(!Array.isArray(r[g].upcoming))r[g].upcoming=[];});reports=r;} else reports=load(LS.reports)||reports;
+    }catch(e){reports=load(LS.reports)||reports;ok=false;}
+    try{const m=await cloudGet(LS.meetings);meetings=Array.isArray(m)?m:load(LS.meetings);}catch(e){meetings=load(LS.meetings);ok=false;}
+    setSyncStat(ok?'已同步 '+fmtClock():'雲端讀取失敗，已用本機');
+  }else{
+    const la=load(LS.acc); if(la&&typeof la==='object'){CATS.forEach(c=>{if(!Array.isArray(la[c]))la[c]=[];});acc=la;}
+    const lr=load(LS.reports); if(lr&&typeof lr==='object'){GROUPS.forEach(g=>{if(!lr[g])lr[g]={done:[],upcoming:[]};});reports=lr;}
+    meetings=load(LS.meetings)||[];
+    setSyncStat('本機模式（未連雲端）');
+  }
+  if(!isUserEditing()){ renderAcc();renderReport();renderCal(); }
+}
+
+/* ============ 初始化 ============ */
+function updateClock(){const d=new Date(),p=n=>String(n).padStart(2,'0');const el=document.getElementById('todayStr');if(el)el.textContent=d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+updateClock();setInterval(updateClock,1000);
+const hn=new Date().getHours();
+const wel=document.getElementById('welcomeText'); if(wel)wel.textContent=hn<12?'總務處 早安':hn<18?'總處 午安':'總處 晚安';
+
+document.querySelectorAll('.nav-item').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const m=b.dataset.mod;
+    document.querySelectorAll('.module').forEach(s=>s.classList.remove('active'));
+    document.getElementById('mod-'+m).classList.add('active');
+    document.getElementById('modTitle').textContent=MODS[m];
+  };
+});
+document.getElementById('prevM').onclick=()=>{calM--;if(calM<0){calM=11;calY--;}renderCal();};
+document.getElementById('nextM').onclick=()=>{calM++;if(calM>11){calM=0;calY++;}renderCal();};
+document.getElementById('todayM').onclick=()=>{calY=now.getFullYear();calM=now.getMonth();renderCal();};
+document.getElementById('mAdd').onclick=addMeeting;
+document.getElementById('exportWord').onclick=exportWord;
+document.getElementById('syncBtn').onclick=()=>{setSyncStat('同步中…');refreshAll();};
+
+(async function boot(){
+  setSyncStat('同步中…');
+  await refreshAll();
+  if(cloudOn&&_sb){ setInterval(refreshAll,20000); }
+})();
+</script>
+</body>
+</html>
