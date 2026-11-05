@@ -214,10 +214,24 @@ input,select,textarea,button{font-family:inherit}
       <div class="card">
         <h3 style="margin:0 0 12px;font-size:16px">登錄會議</h3>
         <form class="meet-form" id="meetForm" onsubmit="return addMeeting()">
-          <div class="f"><label>姓名</label><input type="text" id="m_name" placeholder="姓名" required></div>
+          <div class="f"><label>姓名</label>
+            <select id="m_name" onchange="toggleOther('name')">
+              <option value="">請選擇</option>
+              <option>呂德鈞</option><option>曾玉綺</option><option>李學初</option><option>姚亭伃</option><option>沈德顼</option><option>戎雪妮</option>
+              <option value="__other__">其他</option>
+            </select>
+            <input type="text" id="m_name_other" maxlength="20" placeholder="其他姓名（20字內）" style="display:none;margin-top:4px">
+          </div>
           <div class="f"><label>時間</label><input type="datetime-local" id="m_time" required></div>
           <div class="f"><label>會議主題</label><input type="text" id="m_topic" placeholder="主題" required></div>
-          <div class="f"><label>地點</label><input type="text" id="m_place" placeholder="地點"></div>
+          <div class="f"><label>地點</label>
+            <select id="m_place" onchange="toggleOther('place')">
+              <option value="">請選擇</option>
+              <option>第一會議室</option><option>招生接待室</option><option>培方館</option><option>演藝廳</option>
+              <option value="__other__">其他</option>
+            </select>
+            <input type="text" id="m_place_other" maxlength="20" placeholder="其他地點（20字內）" style="display:none;margin-top:4px">
+          </div>
           <div class="f" style="flex:1;min-width:200px"><label>備註（選填）</label><textarea id="m_note" placeholder="備註"></textarea></div>
           <button class="btn" type="submit">登錄會議</button>
         </form>
@@ -449,6 +463,29 @@ function delRep(g,type,id){ if(!confirm('確定刪除此筆報告？'))return; r
 /* 會議 */
 let calY=null,calM=null,selDay=null,editingMeet=null;
 const DOW=['日','一','二','三','四','五','六'];
+const MEET_NAMES=['呂德鈞','曾玉綺','李學初','姚亭伃','沈德顼','戎雪妮'];
+const MEET_PLACES=['第一會議室','招生接待室','培方館','演藝廳'];
+function toggleOther(which){
+  const sel=document.getElementById('m_'+which);
+  const inp=document.getElementById('m_'+which+'_other');
+  if(sel.value==='__other__'){ inp.style.display='block'; inp.focus(); }
+  else { inp.style.display='none'; inp.value=''; }
+}
+function toggleOtherEdit(which){
+  const sel=document.getElementById('me_'+which);
+  const inp=document.getElementById('me_'+which+'_other');
+  if(sel.value==='__other__'){ inp.style.display='block'; inp.focus(); }
+  else { inp.style.display='none'; inp.value=''; }
+}
+function meetField(field,val){
+  const list = field==='name' ? MEET_NAMES : MEET_PLACES;
+  const inList = list.includes(val);
+  let sel='<select id="me_'+field+'" onchange="toggleOtherEdit(\''+field+'\')"><option value="">請選擇</option>'+
+    list.map(o=>'<option'+(o===val?' selected':'')+'>'+o+'</option>').join('')+
+    '<option value="__other__"'+(!inList&&val?' selected':'')+'>其他</option></select>';
+  let inp='<input type="text" id="me_'+field+'_other" maxlength="20" placeholder="其他（20字內）" value="'+(inList?'':esc(val))+'" style="display:'+(inList?'none':'block')+';margin-top:4px">';
+  return sel+inp;
+}
 function renderCal(){
   const d=new Date(); if(calY==null){calY=d.getFullYear();calM=d.getMonth();}
   document.getElementById('calTitle').textContent=calY+' 年 '+(calM+1)+' 月';
@@ -474,15 +511,18 @@ function pickDay(day){
   document.getElementById('m_time').value=`${calY}-${p(calM+1)}-${p(day)}T09:00`;
 }
 function addMeeting(){
-  const name=document.getElementById('m_name').value.trim();
+  const nameSel=document.getElementById('m_name');
+  const name=nameSel.value==='__other__'?document.getElementById('m_name_other').value.trim():nameSel.value.trim();
   const time=document.getElementById('m_time').value;
   const topic=document.getElementById('m_topic').value.trim();
-  const place=document.getElementById('m_place').value.trim();
+  const placeSel=document.getElementById('m_place');
+  const place=placeSel.value==='__other__'?document.getElementById('m_place_other').value.trim():placeSel.value.trim();
   const note=document.getElementById('m_note').value.trim();
   if(!name||!time||!topic){ alert('請填寫姓名、時間與會議主題'); return false; }
   meetings.push({id:uid(),name,time,topic,place,note,createdBy:currentUser.u});
   saveMeet(); renderMeet(); renderCal();
   document.getElementById('meetForm').reset();
+  ['name','place'].forEach(w=>{const i=document.getElementById('m_'+w+'_other'); if(i){i.style.display='none'; i.value='';}});
   selDay=null;
   return false;
 }
@@ -494,10 +534,10 @@ function renderMeet(){
   arr.forEach(m=>{
     if(editingMeet===m.id){
       html+=`<div class="meet-item"><div class="meet-edit">
-        <input type="text" id="me_name" value="${esc(m.name)}" placeholder="姓名">
+        ${meetField('name',m.name)}
         <input type="datetime-local" id="me_time" value="${esc((m.time||'').replace(' ','T'))}">
         <input type="text" id="me_topic" value="${esc(m.topic)}" placeholder="主題">
-        <input type="text" id="me_place" value="${esc(m.place)}" placeholder="地點">
+        ${meetField('place',m.place)}
         <textarea id="me_note" placeholder="備註">${esc(m.note)}</textarea>
         <button class="btn sm" onclick="saveMeetEdit('${m.id}')">儲存</button>
         <button class="btn ghost sm" onclick="editingMeet=null;renderMeet()">取消</button>
@@ -517,10 +557,12 @@ function renderMeet(){
 }
 function saveMeetEdit(id){
   const m=meetings.find(x=>x.id===id); if(!m)return;
-  m.name=document.getElementById('me_name').value.trim()||m.name;
+  const nameSel=document.getElementById('me_name');
+  m.name=(nameSel.value==='__other__'?document.getElementById('me_name_other').value.trim():nameSel.value.trim())||m.name;
   m.time=document.getElementById('me_time').value;
   m.topic=document.getElementById('me_topic').value.trim()||m.topic;
-  m.place=document.getElementById('me_place').value;
+  const placeSel=document.getElementById('me_place');
+  m.place=(placeSel.value==='__other__'?document.getElementById('me_place_other').value.trim():placeSel.value.trim())||m.place;
   m.note=document.getElementById('me_note').value;
   editingMeet=null; saveMeet(); renderMeet(); renderCal();
 }
