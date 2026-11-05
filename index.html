@@ -608,21 +608,21 @@ function exportWord(){
   const d=new Date(); const p=n=>(''+n).padStart(2,'0');
   const dateStr=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
   const oneJan=new Date(d.getFullYear(),0,1); const week=Math.ceil((((d-oneJan)/86400000)+oneJan.getDay()+1)/7);
-  let rows='';
+  let body='';
   GROUPS.forEach(g=>{
     const r=reports[g]||{done:[],upcoming:[]};
     let n=0;
-    /* 自動編號 一、二、三、四，並保留文字內的換行（1. 2. 3. 4. 分行） */
+    /* 自動編號 一、二、三、四（已完成→即將進行事項連續），保留文字內換行 */
     const num=t=>{ n++; return cnNum(n)+'、'+esc(stripCnPrefix(t)).replace(/\n/g,'<br>'); };
-    const doneHtml=r.done.length?r.done.map(x=>num(x.text)).join('<br>'):'—';
-    const upHtml=r.upcoming.length?r.upcoming.map(x=>num(x.text)).join('<br>'):'—';
-    rows+=`<tr><th rowspan="2" style="background:#fdebd8;text-align:center;vertical-align:middle">${g}</th><td style="background:#eaf1fb;white-space:nowrap">已完成事項</td><td style="white-space:normal">${doneHtml}</td></tr>`;
-    rows+=`<tr><td style="background:#eaf1fb;white-space:nowrap">即將進行事項</td><td style="white-space:normal">${upHtml}</td></tr>`;
+    body+=`<div class="sec">${g}已完成事項</div>`;
+    body+= r.done.length ? r.done.map(x=>`<div>${num(x.text)}</div>`).join('') : `<div>—</div>`;
+    body+=`<div class="sec">即將進行事項</div>`;
+    body+= r.upcoming.length ? r.upcoming.map(x=>`<div>${num(x.text)}</div>`).join('') : `<div>—</div>`;
   });
-  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{font-family:"標楷體",DFKai-SB,serif;font-size:14pt}h1{text-align:center;font-size:20pt;font-weight:bold}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px;vertical-align:top}</style></head><body>
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{font-family:"標楷體",DFKai-SB,serif;font-size:14pt;line-height:1.7}h1{text-align:center;font-size:20pt;font-weight:bold}.sec{font-weight:bold;margin-top:14px;margin-bottom:2px}</style></head><body>
     <h1>總務處各處室工作報告</h1>
     <p><b>彙整日期：</b>${dateStr}　｜　<b>本週次：</b>第 ${week} 週</p>
-    <table>${rows}</table></body></html>`;
+    ${body}</body></html>`;
   const blob=new Blob(['\ufeff'+html],{type:'application/msword'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='總務處工作報告_'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'.doc'; document.body.appendChild(a); a.click();
 }
