@@ -600,6 +600,10 @@ function cnNum(n){
   if(n<20)return '十'+d[n-10];
   const t=Math.floor(n/10),o=n%10; return d[t]+'十'+(o?d[o]:'');
 }
+/* 去掉使用者文字開頭可能多打的中文編號（如「一、」），避免與自動編號重疊成「一、一、」 */
+function stripCnPrefix(t){
+  return (t||'').replace(/^[一二三四五六七八九十百零零]+\s*、\s*/,'');
+}
 function exportWord(){
   const d=new Date(); const p=n=>(''+n).padStart(2,'0');
   const dateStr=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
@@ -608,9 +612,10 @@ function exportWord(){
   GROUPS.forEach(g=>{
     const r=reports[g]||{done:[],upcoming:[]};
     let n=0;
-    const num=t=>{ n++; return cnNum(n)+'、'+t; };
-    const doneHtml=r.done.length?r.done.map(x=>num(esc(x.text))).join('<br>'):'—';
-    const upHtml=r.upcoming.length?r.upcoming.map(x=>num(esc(x.text))).join('<br>'):'—';
+    /* 自動編號 一、二、三、四，並保留文字內的換行（1. 2. 3. 4. 分行） */
+    const num=t=>{ n++; return cnNum(n)+'、'+esc(stripCnPrefix(t)).replace(/\n/g,'<br>'); };
+    const doneHtml=r.done.length?r.done.map(x=>num(x.text)).join('<br>'):'—';
+    const upHtml=r.upcoming.length?r.upcoming.map(x=>num(x.text)).join('<br>'):'—';
     rows+=`<tr><th rowspan="2" style="background:#fdebd8;text-align:center;vertical-align:middle">${g}</th><td style="background:#eaf1fb;white-space:nowrap">已完成事項</td><td style="white-space:normal">${doneHtml}</td></tr>`;
     rows+=`<tr><td style="background:#eaf1fb;white-space:nowrap">即將進行事項</td><td style="white-space:normal">${upHtml}</td></tr>`;
   });
