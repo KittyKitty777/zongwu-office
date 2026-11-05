@@ -1,0 +1,3 @@
+// Supabase 連線設定（僅此檔含密鑰，index.html 不含）
+const SUPABASE_URL='https://gzizktclpsqespnpjbfi.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6aXprdGNscHNxZXNwbnBqYmZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1OTY2MDEsImV4cCI6MjEwOTE3MjYwMX0.VzIxD8YXIhFdUzqxTlvLyds7d8C-MqcP1QjDEuacqRI';
