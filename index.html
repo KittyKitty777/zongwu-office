@@ -318,6 +318,7 @@ function saveMeet(){ lastWriteTs=Date.now(); localStorage.setItem(LSmeet,JSON.st
 
 function isUserEditing(){ const a=document.activeElement; if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'))return true; return false; }
 function nowStr(){ const d=new Date(); const p=n=>(''+n).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+function topDateTime(){ const d=new Date(); const p=n=>(''+n).padStart(2,'0'); return '今天：'+d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
 async function refreshAll(){
   if(!_sb)return;
   if(Date.now()-lastWriteTs<3000)return;
@@ -621,7 +622,7 @@ function purgeEmpty(){
 
 /* ============ 啟動 ============ */
 function boot(){
-  document.getElementById('todayDate').textContent='今天：'+new Date().toLocaleDateString('zh-Hant');
+  document.getElementById('todayDate').textContent=topDateTime();
   document.getElementById('welcomeText').innerHTML='<b>'+currentUser.name+' 您好</b><br><span style="font-size:12px;color:var(--muted)">'+(currentUser.role==='admin'?'超級管理員 · ':'')+currentUser.u+'</span>';
   loadLocal(); purgeEmpty();
   renderAcc(); renderRep(); renderCal(); renderMeet();
@@ -635,6 +636,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('loginPw').addEventListener('keydown',e=>{ if(e.key==='Enter')doLogin(); });
 });
 setInterval(()=>{ if(currentUser && _sb) refreshAll(); },20000);
+setInterval(()=>{ const e=document.getElementById('todayDate'); if(e&&currentUser)e.textContent=topDateTime(); },1000);
 </script>
 </body>
 </html>
