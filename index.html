@@ -302,7 +302,7 @@ const LSacc='chu_acc', LSrep='chu_reports', LSmeet='chu_meetings';
 let acc=[], reports={}, meetings=[];
 let lastWriteTs=0;
 const CATS=['共通事項','事務組','工務組','文書組','交通組','出納組'];
-const GROUPS=['事務組','工務組','文書組','交通組','出納組'];
+const GROUPS=['事務組','工務組','交通組','文書組','出納組'];
 const OWNERS=['曾玉綺','李學初','姚亭伃','沈德顼','戎雪妮'];
 const STATUSES=['未完成','進行中','已完成'];
 
@@ -594,6 +594,12 @@ function saveMeetEdit(id){
 function delMeeting(id){ appConfirm('確定刪除此會議紀錄？',()=>{ meetings=meetings.filter(x=>x.id!==id); saveMeet(); renderMeet(); renderCal(); }); }
 
 /* Word 匯出 */
+function cnNum(n){
+  const d=['零','一','二','三','四','五','六','七','八','九','十'];
+  if(n<=10)return d[n];
+  if(n<20)return '十'+d[n-10];
+  const t=Math.floor(n/10),o=n%10; return d[t]+'十'+(o?d[o]:'');
+}
 function exportWord(){
   const d=new Date(); const p=n=>(''+n).padStart(2,'0');
   const dateStr=d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
@@ -601,12 +607,16 @@ function exportWord(){
   let rows='';
   GROUPS.forEach(g=>{
     const r=reports[g]||{done:[],upcoming:[]};
-    rows+=`<tr><th rowspan="2" style="background:#fdebd8">${g}</th><td style="width:120px;background:#eaf1fb">已完成事項</td><td>${r.done.map(x=>esc(x.text)).join('<br>')||'—'}</td></tr>`;
-    rows+=`<tr><td style="background:#eaf1fb">即將進行事項</td><td>${r.upcoming.map(x=>esc(x.text)).join('<br>')||'—'}</td></tr>`;
+    let n=0;
+    const num=t=>{ n++; return cnNum(n)+'、'+t; };
+    const doneHtml=r.done.length?r.done.map(x=>num(esc(x.text))).join('<br>'):'—';
+    const upHtml=r.upcoming.length?r.upcoming.map(x=>num(esc(x.text))).join('<br>'):'—';
+    rows+=`<tr><th rowspan="2" style="background:#fdebd8;text-align:center;vertical-align:middle">${g}</th><td style="background:#eaf1fb;white-space:nowrap">已完成事項</td><td style="white-space:normal">${doneHtml}</td></tr>`;
+    rows+=`<tr><td style="background:#eaf1fb;white-space:nowrap">即將進行事項</td><td style="white-space:normal">${upHtml}</td></tr>`;
   });
-  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{font-family:"標楷體",DFKai-SB,serif;font-size:14pt}h1{text-align:center}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px;vertical-align:top}</style></head><body>
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{font-family:"標楷體",DFKai-SB,serif;font-size:14pt}h1{text-align:center;font-size:20pt;font-weight:bold}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px;vertical-align:top}</style></head><body>
     <h1>總務處各處室工作報告</h1>
-    <p>彙整日期：${dateStr}　｜　本週次：第 ${week} 週</p>
+    <p><b>彙整日期：</b>${dateStr}　｜　<b>本週次：</b>第 ${week} 週</p>
     <table>${rows}</table></body></html>`;
   const blob=new Blob(['\ufeff'+html],{type:'application/msword'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='總務處工作報告_'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'.doc'; document.body.appendChild(a); a.click();
