@@ -181,6 +181,7 @@ input,select,textarea,button{font-family:inherit}
         <div class="sync-box">
           <button class="btn sm" id="syncBtn" onclick="syncNow()">⟳ 同步資料</button>
           <div class="sync-stat" id="syncStat">本機模式</div>
+          <div id="appVer" style="font-size:10px;color:var(--muted);margin-top:2px"></div>
         </div>
         <img src="bear1.jpg" id="welcomeBear" alt="吉祥物">
         <div id="welcomeText">…</div>
@@ -299,6 +300,7 @@ function doLogout(){
 //   刪除：超級管理員(ZYQ) 或 建立者本人。
 //   修改 / 主任交辦狀態切換：超級管理員 或 建立者本人 或 該組負責人（報告才有組別）。
 const GROUP_LEADER={'事務組':'ZYQ','工務組':'LIXC','交通組':'SHEN','文書組':'YAOTY','出納組':'RONG'};
+const APP_VER='20261105b'; // 建置版本：右上角顯示，若與最新不符請 Ctrl+F5 強制刷新
 function isAdmin(){ return !!(currentUser && currentUser.role==='admin'); }
 function canDelete(rec,group){ if(!currentUser)return false; if(isAdmin())return true; if(rec.createdBy && rec.createdBy===currentUser.u)return true; if(group && GROUP_LEADER[group]===currentUser.u)return true; return false; }
 function canEdit(rec,group){ if(!currentUser)return false; if(isAdmin())return true; if(rec.createdBy && rec.createdBy===currentUser.u)return true; if(group && GROUP_LEADER[group]===currentUser.u)return true; return false; }
@@ -412,12 +414,12 @@ function renderAcc(){
           <button class="btn sm" onclick="saveAccEdit('${it.id}')">儲存</button>
           <button class="btn ghost sm" onclick="editingAcc=null;renderAcc()">取消</button>
         </div></div>`;
-      }else{
-        const edit=canEdit(it), del=canDelete(it);
+        }else{
+        const edit=canEdit(it,cat), del=canDelete(it,cat);
         html+=`<div class="acc-item"><div class="acc-main">
           <div class="acc-text">${esc(it.text)} <span class="tag ${it.status}">${it.status}</span></div>
           <div class="acc-meta">負責人：${esc(it.owner||'—')} ｜ 期限：${esc(it.due||'—')}
-            ${edit?`<select onchange="chgStatus('${it.id}',this.value)">${statusOptions(it.status)}</select>`:''}
+            ${edit?`<select onchange="chgStatus('${it.id}','${cat}',this.value)">${statusOptions(it.status)}</select>`:''}
             ${it.createdBy?`｜ 建立者：${esc(it.createdBy)}`:''}
           </div>
         </div><div class="acc-ops">`+
@@ -441,7 +443,7 @@ function addAcc(cat){
   acc.push({id:uid(),cat,text,owner,due,status,createdBy:currentUser.u});
   addingCat=null; saveAcc(); renderAcc();
 }
-function chgStatus(id,st){ const it=acc.find(x=>x.id===id); if(!it)return; if(!canEdit(it))return; it.status=st; saveAcc(); renderAcc(); }
+function chgStatus(id,cat,st){ const it=acc.find(x=>x.id===id); if(!it)return; if(!canEdit(it,cat))return; it.status=st; saveAcc(); renderAcc(); }
 function saveAccEdit(id){
   const it=acc.find(x=>x.id===id); if(!it)return;
   it.text=document.getElementById('e_text').value.trim()||it.text;
@@ -663,6 +665,7 @@ function purgeEmpty(){
 
 /* ============ 啟動 ============ */
 function boot(){
+  const v=document.getElementById('appVer'); if(v)v.textContent='版本 '+APP_VER;
   document.getElementById('todayDate').textContent=topDateTime();
   document.getElementById('welcomeText').innerHTML='<b>'+currentUser.name+' 您好</b><br><span style="font-size:12px;color:var(--muted)">'+(currentUser.role==='admin'?'超級管理員 · ':'')+currentUser.u+'</span>';
   loadLocal(); purgeEmpty();
