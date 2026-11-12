@@ -167,6 +167,7 @@ input,select,textarea,button{font-family:inherit}
       <button class="nav-item active" data-mod="acc" onclick="switchMod('acc')"><span class="dot"></span>主任交辦事項</button>
       <button class="nav-item" data-mod="rep" onclick="switchMod('rep')"><span class="dot"></span>各處室工作報告</button>
       <button class="nav-item" data-mod="cal" onclick="switchMod('cal')"><span class="dot"></span>會議管理</button>
+      <button class="nav-item" data-mod="car" onclick="switchMod('car')"><span class="dot"></span>派車管理</button>
     </nav>
     <div class="sidebar-foot"><img src="bear2.jpg" alt="吉祥物2"><br>總務處 溫馨提醒您</div>
   </aside>
@@ -191,6 +192,8 @@ input,select,textarea,button{font-family:inherit}
 
     <!-- 今日會議提醒（首頁） -->
     <div class="reminder" id="todayRemind"></div>
+    <!-- 今日派車提醒（首頁） -->
+    <div class="reminder" id="todayRemindCar"></div>
 
     <!-- 模組一：主任交辦事項 -->
     <section class="module active" id="mod-acc">
@@ -250,6 +253,51 @@ input,select,textarea,button{font-family:inherit}
         <div id="meetList"></div>
       </div>
     </section>
+
+    <!-- 模組四：派車管理 -->
+    <section class="module" id="mod-car">
+      <div class="sub">派車管理 · 月曆檢視，橘色數字為當日派車數</div>
+      <div class="card">
+        <div class="cal-head">
+          <div class="mt" id="calTitleD"></div>
+          <div class="nav-btns">
+            <button class="btn ghost sm" onclick="calShiftD(-1)">‹ 上月</button>
+            <button class="btn ghost sm" onclick="calShiftD(0)">今天</button>
+            <button class="btn ghost sm" onclick="calShiftD(1)">下月 ›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGridD"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 12px;font-size:16px">登錄派車</h3>
+        <form class="meet-form" id="dispatchForm" onsubmit="return addDispatch()">
+          <div class="f"><label>申請人</label>
+            <select id="d_name" onchange="toggleOtherD('name')">
+              <option value="">請選擇</option>
+              <option>呂德鈞</option><option>曾玉綺</option><option>李學初</option><option>姚亭伃</option><option>沈德顼</option><option>戎雪妮</option>
+              <option value="__other__">其他</option>
+            </select>
+            <input type="text" id="d_name_other" maxlength="20" placeholder="其他姓名（20字內）" style="display:none;margin-top:4px">
+          </div>
+          <div class="f"><label>出車時間</label><input type="datetime-local" id="d_time" required></div>
+          <div class="f"><label>事由</label><input type="text" id="d_topic" placeholder="事由" required></div>
+          <div class="f"><label>目的地</label>
+            <select id="d_place" onchange="toggleOtherD('place')">
+              <option value="">請選擇</option>
+              <option>第一會議室</option><option>招生接待室</option><option>培方館</option><option>演藝廳</option>
+              <option value="__other__">其他</option>
+            </select>
+            <input type="text" id="d_place_other" maxlength="20" placeholder="其他地點（20字內）" style="display:none;margin-top:4px">
+          </div>
+          <div class="f" style="flex:1;min-width:200px"><label>備註（選填）</label><textarea id="d_note" placeholder="備註"></textarea></div>
+          <button class="btn" type="submit">登錄派車</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 10px;font-size:16px">派車紀錄</h3>
+        <div id="dispatchList"></div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -296,15 +344,24 @@ function doLogout(){
   document.getElementById('loginErr').textContent='';
 }
 // 權限規則：
-//   所有人都能看到全部內容（顯示不過濾）。
+//   顯示：主任交辦 預設「公開」人人可看；設為「機密」則僅 超級管理員(ZYQ)、LUDH 副校長兼總務主任、該組負責人 可看。
 //   刪除：超級管理員(ZYQ) 或 建立者本人。
 //   修改 / 主任交辦狀態切換：超級管理員 或 建立者本人 或 該組負責人（報告才有組別）。
 const GROUP_LEADER={'事務組':'ZYQ','工務組':'LIXC','交通組':'SHEN','文書組':'YAOTY','出納組':'RONG'};
-const APP_VER='20261105b'; // 建置版本：右上角顯示，若與最新不符請 Ctrl+F5 強制刷新
+const APP_VER='20261112a'; // 建置版本：右上角顯示，若與最新不符請 Ctrl+F5 強制刷新
 function isAdmin(){ return !!(currentUser && currentUser.role==='admin'); }
 function canDelete(rec,group){ if(!currentUser)return false; if(isAdmin())return true; if(rec.createdBy && rec.createdBy===currentUser.u)return true; if(group && GROUP_LEADER[group]===currentUser.u)return true; return false; }
 function canEdit(rec,group){ if(!currentUser)return false; if(isAdmin())return true; if(rec.createdBy && rec.createdBy===currentUser.u)return true; if(group && GROUP_LEADER[group]===currentUser.u)return true; return false; }
 function meTag(){ return currentUser?('（'+currentUser.name+' '+currentUser.u+(currentUser.role==='admin'?' · 超級管理員':'')+'）'):''; }
+/* 主任交辦 機密/公開 可見性：公開=所有人可看；機密=僅超級管理員、LUDH 副校長兼總務主任、該組負責人 */
+function canSeeAcc(it,cat){
+  if(!it.visibility || it.visibility==='公開') return true;
+  if(isAdmin()) return true;
+  if(currentUser && currentUser.u==='LUDH') return true;
+  if(cat && GROUP_LEADER[cat]===currentUser.u) return true;
+  return false;
+}
+function visOptions(sel){ return ['公開','機密'].map(s=>`<option ${s===sel?'selected':''}>${s}</option>`).join(''); }
 
 /* ============ 雲端同步 ============ */
 let _sb=null;
@@ -314,8 +371,8 @@ async function sbGet(key){ if(!_sb)return undefined; const {data,error}=await _s
 async function sbSet(key,val){ if(!_sb)return false; const {error}=await _sb.from('app_data').upsert({key,value:val},{onConflict:'key'}); return !error; }
 
 /* ============ 本地資料 ============ */
-const LSacc='chu_acc', LSrep='chu_reports', LSmeet='chu_meetings';
-let acc=[], reports={}, meetings=[];
+const LSacc='chu_acc', LSrep='chu_reports', LSmeet='chu_meetings', LSdisp='chu_dispatch';
+let acc=[], reports={}, meetings=[], dispatch=[];
 let lastWriteTs=0;
 const CATS=['共通事項','事務組','工務組','文書組','交通組','出納組'];
 const GROUPS=['事務組','工務組','交通組','文書組','出納組'];
@@ -326,11 +383,13 @@ function loadLocal(){
   try{ acc=JSON.parse(localStorage.getItem(LSacc)||'[]'); }catch(e){ acc=[]; }
   try{ reports=JSON.parse(localStorage.getItem(LSrep)||'{}'); }catch(e){ reports={}; }
   try{ meetings=JSON.parse(localStorage.getItem(LSmeet)||'[]'); }catch(e){ meetings=[]; }
+  try{ dispatch=JSON.parse(localStorage.getItem(LSdisp)||'[]'); }catch(e){ dispatch=[]; }
   GROUPS.forEach(g=>{ if(!reports[g])reports[g]={done:[],upcoming:[]}; });
 }
 function saveAcc(){ lastWriteTs=Date.now(); localStorage.setItem(LSacc,JSON.stringify(acc)); if(_sb)sbSet(LSacc,acc); }
 function saveReports(){ lastWriteTs=Date.now(); localStorage.setItem(LSrep,JSON.stringify(reports)); if(_sb)sbSet(LSrep,reports); }
 function saveMeet(){ lastWriteTs=Date.now(); localStorage.setItem(LSmeet,JSON.stringify(meetings)); if(_sb)sbSet(LSmeet,meetings); }
+function saveDispatch(){ lastWriteTs=Date.now(); localStorage.setItem(LSdisp,JSON.stringify(dispatch)); if(_sb)sbSet(LSdisp,dispatch); }
 
 function isUserEditing(){ const a=document.activeElement; if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'))return true; return false; }
 function nowStr(){ const d=new Date(); const p=n=>(''+n).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
@@ -339,8 +398,8 @@ async function refreshAll(){
   if(!_sb)return;
   if(Date.now()-lastWriteTs<3000)return;
   try{
-    const [a,r,m]=await Promise.all([sbGet(LSacc),sbGet(LSrep),sbGet(LSmeet)]);
-    if(a)acc=a; if(r)reports=r; if(m)meetings=m;
+    const [a,r,m,dp]=await Promise.all([sbGet(LSacc),sbGet(LSrep),sbGet(LSmeet),sbGet(LSdisp)]);
+    if(a)acc=a; if(r)reports=r; if(m)meetings=m; if(dp)dispatch=dp;
     GROUPS.forEach(g=>{ if(!reports[g])reports[g]={done:[],upcoming:[]}; });
     if(!isUserEditing()) renderAll();
     const s=document.getElementById('syncStat'); if(s)s.textContent='已同步 '+nowStr();
@@ -362,15 +421,16 @@ function appConfirm(msg,cb){ _confirmCb=cb; const m=document.getElementById('app
 })();
 
 /* ============ 渲染 ============ */
-const TITLE={acc:'主任交辦事項',rep:'各處室工作報告',cal:'會議管理'};
+const TITLE={acc:'主任交辦事項',rep:'各處室工作報告',cal:'會議管理',car:'派車管理'};
 function switchMod(m){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.mod===m));
   document.querySelectorAll('.module').forEach(s=>s.classList.remove('active'));
   document.getElementById('mod-'+m).classList.add('active');
   document.getElementById('modTitle').textContent=TITLE[m];
   if(m==='cal')renderCal();
+  if(m==='car')renderCalD();
 }
-function renderAll(){ renderAcc(); renderRep(); renderCal(); renderMeet(); }
+function renderAll(){ renderAcc(); renderRep(); renderCal(); renderMeet(); renderDispatch(); }
 
 function ownerOptions(sel){ return '<option value="">請選擇</option>'+OWNERS.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join(''); }
 function statusOptions(sel){ return STATUSES.map(s=>`<option ${s===sel?'selected':''}>${s}</option>`).join(''); }
@@ -379,9 +439,10 @@ function uid(){ return Date.now()+'-'+Math.floor(Math.random()*1e4); }
 
 let addingCat=null, editingAcc=null;
 function renderAcc(){
-  const total=acc.length;
-  const undone=acc.filter(x=>x.status!=='已完成').length;
-  const perCat=CATS.map(c=>acc.filter(x=>x.cat===c && x.status!=='已完成').length);
+  const vis=acc.filter(x=>canSeeAcc(x,x.cat));
+  const total=vis.length;
+  const undone=vis.filter(x=>x.status!=='已完成').length;
+  const perCat=CATS.map(c=>vis.filter(x=>x.cat===c && x.status!=='已完成').length);
   document.getElementById('accStats').innerHTML=
     `<div class="stat"><div class="n">${total}</div><div class="l">交辦總數</div></div>`+
     `<div class="stat orange"><div class="n">${undone}</div><div class="l">未完成數</div></div>`+
@@ -389,7 +450,7 @@ function renderAcc(){
 
   let html='';
   CATS.forEach(cat=>{
-    const items=acc.filter(x=>x.cat===cat);
+    const items=acc.filter(x=>x.cat===cat && canSeeAcc(x,cat));
     const und=items.filter(x=>x.status!=='已完成').length;
     html+=`<div class="acc-cat open"><div class="acc-head" onclick="toggleCat(this)"><span class="ct">${cat}</span><span class="badge">${und}</span><button class="add" onclick="event.stopPropagation();startAdd('${cat}')">＋新增</button></div><div class="acc-body">`;
     if(addingCat===cat){
@@ -398,6 +459,7 @@ function renderAcc(){
         <select id="a_owner">${ownerOptions('')}</select>
         <input type="date" id="a_due">
         <select id="a_status">${statusOptions('未完成')}</select>
+        <select id="a_vis">${visOptions('公開')}</select>
         <button class="btn sm" onclick="addAcc('${cat}')">新增</button>
         <button class="btn ghost sm" onclick="addingCat=null;renderAcc()">取消</button>
       </div>`;
@@ -411,13 +473,14 @@ function renderAcc(){
           <select id="e_owner">${ownerOptions(it.owner)}</select>
           <input type="date" id="e_due" value="${esc(it.due)}">
           <select id="e_status">${statusOptions(it.status)}</select>
+          <select id="e_vis">${visOptions(it.visibility||'公開')}</select>
           <button class="btn sm" onclick="saveAccEdit('${it.id}')">儲存</button>
           <button class="btn ghost sm" onclick="editingAcc=null;renderAcc()">取消</button>
         </div></div>`;
         }else{
         const edit=canEdit(it,cat), del=canDelete(it,cat);
         html+=`<div class="acc-item"><div class="acc-main">
-          <div class="acc-text">${esc(it.text)} <span class="tag ${it.status}">${it.status}</span></div>
+          <div class="acc-text">${esc(it.text)} <span class="tag ${it.status}">${it.status}</span>${it.visibility==='機密'?'<span class="tag" style="background:#7a4fb0;color:#fff">🔒機密</span>':''}</div>
           <div class="acc-meta">負責人：${esc(it.owner||'—')} ｜ 期限：${esc(it.due||'—')}
             ${edit?`<select onchange="chgStatus('${it.id}','${cat}',this.value)">${statusOptions(it.status)}</select>`:''}
             ${it.createdBy?`｜ 建立者：${esc(it.createdBy)}`:''}
@@ -439,8 +502,9 @@ function addAcc(cat){
   const owner=document.getElementById('a_owner').value;
   const due=document.getElementById('a_due').value;
   const status=document.getElementById('a_status').value;
+  const visibility=document.getElementById('a_vis').value;
   if(!text){ alert('請填寫交辦內容'); return; }
-  acc.push({id:uid(),cat,text,owner,due,status,createdBy:currentUser.u});
+  acc.push({id:uid(),cat,text,owner,due,status,visibility,createdBy:currentUser.u});
   addingCat=null; saveAcc(); renderAcc();
 }
 function chgStatus(id,cat,st){ const it=acc.find(x=>x.id===id); if(!it)return; if(!canEdit(it,cat))return; it.status=st; saveAcc(); renderAcc(); }
@@ -450,6 +514,7 @@ function saveAccEdit(id){
   it.owner=document.getElementById('e_owner').value;
   it.due=document.getElementById('e_due').value;
   it.status=document.getElementById('e_status').value;
+  it.visibility=document.getElementById('e_vis').value;
   editingAcc=null; saveAcc(); renderAcc();
 }
 function delAcc(id){ appConfirm('確定刪除此交辦事項？',()=>{ acc=acc.filter(x=>x.id!==id); saveAcc(); renderAcc(); }); }
@@ -621,6 +686,122 @@ function renderTodayMeet(){
     list.map(x=>`<div class="reminder-item">⏰ ${fmtTime(x.time)} ｜ ${esc(x.topic)} ｜ ${esc(x.name)} ｜ ${esc(x.place||'—')}</div>`).join('');
 }
 
+/* 派車 */
+let calYD=null,calMD=null,selDayD=null,editingDisp=null;
+function toggleOtherD(which){
+  const sel=document.getElementById('d_'+which);
+  const inp=document.getElementById('d_'+which+'_other');
+  if(sel.value==='__other__'){ inp.style.display='block'; inp.focus(); }
+  else { inp.style.display='none'; inp.value=''; }
+}
+function dispField(field,val){
+  const list = field==='name' ? MEET_NAMES : MEET_PLACES;
+  const inList = list.includes(val);
+  let sel='<select id="de_'+field+'" onchange="toggleOtherEditD(\''+field+'\')"><option value="">請選擇</option>'+
+    list.map(o=>'<option'+(o===val?' selected':'')+'>'+o+'</option>').join('')+
+    '<option value="__other__"'+(!inList&&val?' selected':'')+'>其他</option></select>';
+  let inp='<input type="text" id="de_'+field+'_other" maxlength="20" placeholder="其他（20字內）" value="'+(inList?'':esc(val))+'" style="display:'+(inList?'none':'block')+';margin-top:4px">';
+  return sel+inp;
+}
+function toggleOtherEditD(which){
+  const sel=document.getElementById('de_'+which);
+  const inp=document.getElementById('de_'+which+'_other');
+  if(sel.value==='__other__'){ inp.style.display='block'; inp.focus(); }
+  else { inp.style.display='none'; inp.value=''; }
+}
+function renderCalD(){
+  const d=new Date(); if(calYD==null){calYD=d.getFullYear();calMD=d.getMonth();}
+  document.getElementById('calTitleD').textContent=calYD+' 年 '+(calMD+1)+' 月';
+  const first=new Date(calYD,calMD,1).getDay();
+  const days=new Date(calYD,calMD+1,0).getDate();
+  const today=d.getDate(), tY=d.getFullYear(), tM=d.getMonth();
+  let html='';
+  DOW.forEach(w=>`<div class="cal-dow">${w}</div>`);
+  for(let i=0;i<first;i++) html+=`<div class="cal-cell muted"></div>`;
+  for(let day=1;day<=days;day++){
+    const cnt=dispatch.filter(m=>{ const t=new Date(m.time); return t.getFullYear()===calYD&&t.getMonth()===calMD&&t.getDate()===day; }).length;
+    const isT=(day===today&&calYD===tY&&calMD===tM);
+    const isSel=(selDayD===day);
+    html+=`<div class="cal-cell${isT?' today':''}${isSel?' sel':''}" onclick="pickDayD(${day})">
+      <span class="cnum">${day}</span>${cnt?`<span class="cdot">${cnt}</span>`:''}</div>`;
+  }
+  document.getElementById('calGridD').innerHTML=html;
+}
+function calShiftD(n){ if(n===0){const d=new Date();calYD=d.getFullYear();calMD=d.getMonth();}else{const d=new Date(calYD,calMD+n,1);calYD=d.getFullYear();calMD=d.getMonth();} renderCalD(); }
+function pickDayD(day){
+  selDayD=day; renderCalD();
+  const p=n=>(''+n).padStart(2,'0');
+  document.getElementById('d_time').value=`${calYD}-${p(calMD+1)}-${p(day)}T09:00`;
+}
+function addDispatch(){
+  const nameSel=document.getElementById('d_name');
+  const name=nameSel.value==='__other__'?document.getElementById('d_name_other').value.trim():nameSel.value.trim();
+  const time=document.getElementById('d_time').value;
+  const topic=document.getElementById('d_topic').value.trim();
+  const placeSel=document.getElementById('d_place');
+  const place=placeSel.value==='__other__'?document.getElementById('d_place_other').value.trim():placeSel.value.trim();
+  const note=document.getElementById('d_note').value.trim();
+  if(!name||!time||!topic){ alert('請填寫申請人、出車時間與事由'); return false; }
+  dispatch.push({id:uid(),name,time,topic,place,note,createdBy:currentUser.u});
+  saveDispatch(); renderDispatch(); renderCalD();
+  document.getElementById('dispatchForm').reset();
+  ['name','place'].forEach(w=>{const i=document.getElementById('d_'+w+'_other'); if(i){i.style.display='none'; i.value='';}});
+  selDayD=null;
+  return false;
+}
+function renderDispatch(){
+  const arr=[...dispatch].sort((a,b)=>new Date(a.time)-new Date(b.time));
+  let html='';
+  if(arr.length===0){ html='<div class="empty">尚無派車紀錄</div>'; }
+  arr.forEach(m=>{
+    if(editingDisp===m.id){
+      html+=`<div class="meet-item"><div class="meet-edit">
+        ${dispField('name',m.name)}
+        <input type="datetime-local" id="de_time" value="${esc((m.time||'').replace(' ','T'))}">
+        <input type="text" id="de_topic" value="${esc(m.topic)}" placeholder="事由">
+        ${dispField('place',m.place)}
+        <textarea id="de_note" placeholder="備註">${esc(m.note)}</textarea>
+        <button class="btn sm" onclick="saveDispatchEdit('${m.id}')">儲存</button>
+        <button class="btn ghost sm" onclick="editingDisp=null;renderDispatch()">取消</button>
+      </div></div>`;
+    }else{
+      const edit=canEdit(m), del=canDelete(m);
+      html+=`<div class="meet-item"><div class="meet-main">
+        <div class="mt">${esc(m.topic)}</div>
+        <div class="mi">出車時間：${fmtTime(m.time)} ｜ 申請人：${esc(m.name)} ｜ 目的地：${esc(m.place||'—')} ${m.createdBy?('｜ 建立者：'+esc(m.createdBy)):''} ${m.note?('｜ 備註：'+esc(m.note)):''}</div>
+      </div><div class="meet-ops">`+
+        (edit?`<button class="btn ghost sm" onclick="editingDisp='${m.id}';renderDispatch()">修改</button>`:'')+
+        (del?`<button class="btn sm" style="background:#e35d4f" onclick="delDispatch('${m.id}')">刪除</button>`:'')+
+      `</div></div>`;
+    }
+  });
+  document.getElementById('dispatchList').innerHTML=html;
+  renderTodayDispatch();
+}
+function saveDispatchEdit(id){
+  const m=dispatch.find(x=>x.id===id); if(!m)return;
+  const nameSel=document.getElementById('de_name');
+  m.name=(nameSel.value==='__other__'?document.getElementById('de_name_other').value.trim():nameSel.value.trim())||m.name;
+  m.time=document.getElementById('de_time').value;
+  m.topic=document.getElementById('de_topic').value.trim()||m.topic;
+  const placeSel=document.getElementById('de_place');
+  m.place=(placeSel.value==='__other__'?document.getElementById('de_place_other').value.trim():placeSel.value.trim())||m.place;
+  m.note=document.getElementById('de_note').value;
+  editingDisp=null; saveDispatch(); renderDispatch(); renderCalD();
+}
+function delDispatch(id){ appConfirm('確定刪除此派車紀錄？',()=>{ dispatch=dispatch.filter(x=>x.id!==id); saveDispatch(); renderDispatch(); renderCalD(); }); }
+/* 首頁：今日派車提醒 */
+function renderTodayDispatch(){
+  const el=document.getElementById('todayRemindCar'); if(!el)return;
+  const d=new Date(); const y=d.getFullYear(),m=d.getMonth(),day=d.getDate();
+  const list=dispatch.filter(x=>{ const t=new Date(x.time); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===day; })
+    .sort((a,b)=>new Date(a.time)-new Date(b.time));
+  if(list.length===0){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='block';
+  el.innerHTML=`<div class="reminder-title">🚗 今日派車管理（${y}/${m+1}/${day}）共 ${list.length} 筆</div>`+
+    list.map(x=>`<div class="reminder-item">⏰ ${fmtTime(x.time)} ｜ ${esc(x.topic)} ｜ ${esc(x.name)} ｜ ${esc(x.place||'—')}</div>`).join('');
+}
+
 /* Word 匯出 */
 function cnNum(n){
   const d=['零','一','二','三','四','五','六','七','八','九','十'];
@@ -660,7 +841,8 @@ function purgeEmpty(){
   const fa=acc.filter(x=>x.text&&x.text.trim()); if(fa.length!==acc.length){acc=fa;changed=true;}
   GROUPS.forEach(g=>{ if(!reports[g])return; ['done','upcoming'].forEach(t=>{ const arr=reports[g][t]||[]; const f=arr.filter(x=>x.text&&x.text.trim()); if(f.length!==arr.length){reports[g][t]=f;changed=true;} }); });
   const fm=meetings.filter(x=>x.topic&&x.topic.trim()); if(fm.length!==meetings.length){meetings=fm;changed=true;}
-  if(changed){ saveAcc(); saveReports(); saveMeet(); }
+  const fd=dispatch.filter(x=>x.topic&&x.topic.trim()); if(fd.length!==dispatch.length){dispatch=fd;changed=true;}
+  if(changed){ saveAcc(); saveReports(); saveMeet(); saveDispatch(); }
 }
 
 /* ============ 啟動 ============ */
@@ -669,7 +851,7 @@ function boot(){
   document.getElementById('todayDate').textContent=topDateTime();
   document.getElementById('welcomeText').innerHTML='<b>'+currentUser.name+' 您好</b><br><span style="font-size:12px;color:var(--muted)">'+(currentUser.role==='admin'?'超級管理員 · ':'')+currentUser.u+'</span>';
   loadLocal(); purgeEmpty();
-  renderAcc(); renderRep(); renderCal(); renderMeet(); renderTodayMeet();
+  renderAcc(); renderRep(); renderCal(); renderMeet(); renderDispatch(); renderTodayMeet();
   if(_sb){ document.getElementById('syncStat').textContent='同步中…'; refreshAll(); }
   else { document.getElementById('syncStat').textContent='本機模式（未連雲端）'; }
 }
