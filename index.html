@@ -348,7 +348,7 @@ function doLogout(){
 //   刪除：超級管理員(ZYQ) 或 建立者本人。
 //   修改 / 主任交辦狀態切換：超級管理員 或 建立者本人 或 該組負責人（報告才有組別）。
 const GROUP_LEADER={'事務組':'ZYQ','工務組':'LIXC','交通組':'SHEN','文書組':'YAOTY','出納組':'RONG'};
-const APP_VER='20261112a'; // 建置版本：右上角顯示，若與最新不符請 Ctrl+F5 強制刷新
+const APP_VER='20261112b'; // 建置版本：右上角顯示，若與最新不符請 Ctrl+F5 強制刷新
 function isAdmin(){ return !!(currentUser && currentUser.role==='admin'); }
 function canDelete(rec,group){ if(!currentUser)return false; if(isAdmin())return true; if(rec.createdBy && rec.createdBy===currentUser.u)return true; if(group && GROUP_LEADER[group]===currentUser.u)return true; return false; }
 function canEdit(rec,group){ if(!currentUser)return false; if(isAdmin())return true; if(rec.createdBy && rec.createdBy===currentUser.u)return true; if(group && GROUP_LEADER[group]===currentUser.u)return true; return false; }
@@ -680,8 +680,11 @@ function renderTodayMeet(){
   const d=new Date(); const y=d.getFullYear(),m=d.getMonth(),day=d.getDate();
   const list=meetings.filter(x=>{ const t=new Date(x.time); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===day; })
     .sort((a,b)=>new Date(a.time)-new Date(b.time));
-  if(list.length===0){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='block';
+  if(list.length===0){
+    el.innerHTML=`<div class="reminder-title">📅 今日會議提醒（${y}/${m+1}/${day}）</div><div class="reminder-item">今日暫無會議</div>`;
+    return;
+  }
   el.innerHTML=`<div class="reminder-title">📅 今日會議提醒（${y}/${m+1}/${day}）共 ${list.length} 場</div>`+
     list.map(x=>`<div class="reminder-item">⏰ ${fmtTime(x.time)} ｜ ${esc(x.topic)} ｜ ${esc(x.name)} ｜ ${esc(x.place||'—')}</div>`).join('');
 }
@@ -796,8 +799,11 @@ function renderTodayDispatch(){
   const d=new Date(); const y=d.getFullYear(),m=d.getMonth(),day=d.getDate();
   const list=dispatch.filter(x=>{ const t=new Date(x.time); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===day; })
     .sort((a,b)=>new Date(a.time)-new Date(b.time));
-  if(list.length===0){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='block';
+  if(list.length===0){
+    el.innerHTML=`<div class="reminder-title">🚗 今日派車管理（${y}/${m+1}/${day}）</div><div class="reminder-item">今日暫無派車</div>`;
+    return;
+  }
   el.innerHTML=`<div class="reminder-title">🚗 今日派車管理（${y}/${m+1}/${day}）共 ${list.length} 筆</div>`+
     list.map(x=>`<div class="reminder-item">⏰ ${fmtTime(x.time)} ｜ ${esc(x.topic)} ｜ ${esc(x.name)} ｜ ${esc(x.place||'—')}</div>`).join('');
 }
